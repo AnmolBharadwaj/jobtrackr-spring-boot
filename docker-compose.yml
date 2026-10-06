@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: jobtrackr
+      POSTGRES_USER: jobtrackr
+      POSTGRES_PASSWORD: jobtrackr
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://postgres:5432/jobtrackr
+      DB_USERNAME: jobtrackr
+      DB_PASSWORD: jobtrackr
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
