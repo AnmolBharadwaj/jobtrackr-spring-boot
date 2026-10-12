@@ -1,106 +1,83 @@
-# JobTrackr — Spring Boot Learning Project
+# JobTrackr — Spring Boot REST API
 
-A real-world, beginner-friendly REST API for tracking job applications. The project is intentionally built around the same concepts taught in the Telusko Java Spring Framework / Spring Boot path: Java + OOP, Maven, Spring IoC/DI, Spring MVC, REST APIs, Hibernate/JPA, Spring Data JPA, validation, exception handling, testing, and a first step toward Docker/PostgreSQL.
+[![Java CI](https://github.com/AnmolBharadwaj/jobtrackr-spring-boot/actions/workflows/ci.yml/badge.svg)](https://github.com/AnmolBharadwaj/jobtrackr-spring-boot/actions/workflows/ci.yml)
 
-## Why this project?
+JobTrackr is a portfolio project for managing job applications through a REST API. It demonstrates a layered Java backend, persistence with Spring Data JPA/Hibernate, request validation, consistent API errors, filtering, pagination, automated tests, and a CI workflow.
 
-A tiny `Hello World` app teaches syntax. A small but complete backend teaches how the pieces actually connect.
+> **Project status:** Learning/portfolio application. It is not a production-ready multi-user service and is not currently advertised as a deployed hosted API.
 
-JobTrackr gives you a portfolio project you can explain from request → controller → service → repository → database and back again.
+## Features
+
+- CRUD endpoints for job applications
+- Search by company or role, status filtering, pagination, and sorting
+- Summary statistics grouped by application status
+- DTOs to separate the API contract from JPA entities
+- Bean Validation and structured field-level error responses
+- Duplicate company/role detection and clean 404 handling
+- H2 for quick local development; PostgreSQL profile and Docker Compose option
+- JUnit/Spring tests and GitHub Actions CI (`mvn -B test`)
 
 ## Tech stack
 
-- Java 21
-- Spring Boot 3.5.16
-- Spring Web / REST
-- Spring Data JPA + Hibernate
-- H2 for zero-setup local development
-- PostgreSQL profile for a more production-like database
-- Jakarta Bean Validation
-- JUnit 5 + Mockito + Spring MVC Test
-- Maven
-- Docker + Docker Compose
-- GitHub Actions CI
-
-Spring Boot 3.5.16 is used here as the final open-source release in the 3.5.x generation.
+Java 21 · Spring Boot 3.5.x · Spring MVC · Spring Data JPA · Hibernate · Jakarta Bean Validation · H2 · PostgreSQL · Maven · JUnit 5 · Mockito · Docker · GitHub Actions
 
 ## Architecture
 
 ```text
-HTTP Client (Postman / curl)
+HTTP client (curl / Postman)
           |
           v
-   JobApplicationController
+JobApplicationController  -> HTTP mapping + request validation
           |
           v
-     JobApplicationService
+JobApplicationService     -> business rules + orchestration
           |
           v
-   JobApplicationRepository
+JobApplicationRepository  -> Spring Data JPA
           |
           v
-   H2 / PostgreSQL Database
+H2 / PostgreSQL           -> persistence
 ```
 
-The DTOs keep the API contract separate from the JPA entity. The service owns business rules. The repository owns persistence queries.
+DTOs keep the request/response contract separate from persistence entities. The service layer owns business rules; the repository layer focuses on data access.
 
-## Run locally with H2
+## Run locally
 
-Requirements:
-
-- JDK 21
-- Maven 3.9+
-
-Run:
+Requirements: JDK 21 and Maven 3.9+.
 
 ```bash
+git clone https://github.com/AnmolBharadwaj/jobtrackr-spring-boot.git
+cd jobtrackr-spring-boot
+mvn test
 mvn spring-boot:run
 ```
 
-The API starts on `http://localhost:8080`.
+The API starts at `http://localhost:8080`. The default profile uses H2.
 
-H2 console: `http://localhost:8080/h2-console`
+## Run with PostgreSQL and Docker
 
-Use:
-
-```text
-JDBC URL: jdbc:h2:file:./data/jobtrackr
-User: sa
-Password: <empty>
-```
-
-## Run with PostgreSQL + Docker
+With Docker installed and running:
 
 ```bash
 docker compose up --build
 ```
 
-The app will be available at `http://localhost:8080` and PostgreSQL at port `5432`.
+This starts the API and PostgreSQL service. Configuration is in `docker-compose.yml` and the PostgreSQL Spring profile. Do not use the sample setup as-is for production credentials or deployment.
 
-## API endpoints
+## API overview
 
-### Create
+Base URL: `http://localhost:8080`
 
-`POST /api/applications`
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/applications` | Create an application |
+| GET | `/api/applications` | List, search, filter, paginate, sort |
+| GET | `/api/applications/{id}` | Get one application |
+| PUT | `/api/applications/{id}` | Update an application |
+| DELETE | `/api/applications/{id}` | Delete an application |
+| GET | `/api/applications/stats` | Summary counts by status |
 
-```json
-{
-  "companyName": "Acme Technologies",
-  "role": "Java Backend Developer",
-  "location": "Gurugram",
-  "status": "APPLIED",
-  "source": "LinkedIn",
-  "appliedDate": "2026-10-07",
-  "interviewDate": null,
-  "notes": "Resume submitted."
-}
-```
-
-### List
-
-`GET /api/applications`
-
-Pagination and sorting are supported through Spring Data's `Pageable`.
+Status values: `APPLIED`, `SCREENING`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
 
 Examples:
 
@@ -108,75 +85,40 @@ Examples:
 GET /api/applications?page=0&size=5
 GET /api/applications?status=INTERVIEW
 GET /api/applications?q=java&page=0&size=10
+GET /api/applications?sort=appliedDate,desc
 ```
 
-### Get one
+See [API Reference](docs/API.md) for request/response examples and [Smoke Test Checklist](docs/SMOKE_TEST.md) for runnable curl commands.
 
-`GET /api/applications/{id}`
+## Business rules
 
-### Update
-
-`PUT /api/applications/{id}`
-
-### Delete
-
-`DELETE /api/applications/{id}`
-
-### Stats
-
-`GET /api/applications/stats`
-
-Returns total applications plus counts grouped by status.
-
-## Business rules implemented
-
-1. Company name and role are mandatory.
+1. Company name and role are required.
 2. Applied date cannot be in the future.
 3. Duplicate company + role applications are rejected.
-4. Missing IDs return a clean `404` response.
-5. Invalid request bodies return a structured `400` response with field-level errors.
-6. Empty optional strings are normalized to `null`.
+4. Missing IDs return a structured 404 response.
+5. Invalid request bodies return a structured 400 response with field-level errors.
+6. Empty optional strings are normalized to null.
 
-## Learning map
+## Tests and CI
 
-| Course concept | Where it appears |
-|---|---|
-| Core Java / OOP | Entities, services, enums, records, collections, streams |
-| Maven | `pom.xml` |
-| Spring Boot | `JobTrackrApplication` |
-| IoC / Dependency Injection | Constructor injection in controller/service |
-| Spring MVC | `@RestController`, mappings, request parameters |
-| REST | CRUD endpoints + HTTP status codes |
-| JPA / Hibernate | `JobApplication` entity + annotations |
-| Spring Data JPA | `JobApplicationRepository` derived queries |
-| Validation | `@Valid`, `@NotBlank`, `@NotNull`, `@PastOrPresent` |
-| Exception handling | `GlobalExceptionHandler` |
-| JUnit / Mockito | Unit tests in `src/test` |
-| H2 | Default local database |
-| PostgreSQL | `postgres` profile + Docker Compose |
-| Docker | `Dockerfile`, `docker-compose.yml` |
-| CI | `.github/workflows/ci.yml` |
+Run all automated tests with:
 
-The project deliberately follows the course progression from Java and Maven into Spring Boot, REST, JPA/Hibernate, and Spring Data JPA before moving toward security, Docker, cloud, and Spring AI.
-
-## What to learn next
-
-This project intentionally stops short of JWT/security and AI so the fundamentals stay clear. Once the basics in the course feel comfortable, the natural next branch is:
-
-```text
-JobTrackr v1
-  -> Spring Security
-  -> JWT authentication
-  -> User accounts / per-user applications
-  -> PostgreSQL + migrations
-  -> OpenAPI / Swagger
-  -> Docker deployment
-  -> Spring AI assistant for job-search insights
+```bash
+mvn test
 ```
 
-## Interview one-liner
+GitHub Actions runs the Maven test suite on pushes to `main` and pull requests targeting `main`. Check the badge above for the current status.
 
-> “I built a layered Spring Boot REST API called JobTrackr to manage job applications. It uses Spring MVC for the API layer, a service layer for business rules, Spring Data JPA/Hibernate for persistence, H2/PostgreSQL for storage, Bean Validation and global exception handling for API robustness, plus JUnit/Mockito tests and Docker support.”
+## Interview preparation
+
+- [Interview Guide](docs/INTERVIEW_GUIDE.md) — request flow, design choices, likely questions, and limitations
+- [Interview Notes](docs/INTERVIEW_NOTES.md) — concise explanations of key Spring concepts
+- [API Reference](docs/API.md) — endpoints and error format
+- [Smoke Test Checklist](docs/SMOKE_TEST.md) — local test steps
+
+## Known limitations and next steps
+
+This project does not yet implement authentication, authorization, per-user data isolation, database migrations, rate limiting, or a deployed production environment. Sensible next improvements include Spring Security, Flyway migrations, OpenAPI documentation, integration tests against PostgreSQL/Testcontainers, observability, and stricter pagination limits.
 
 ## License
 
